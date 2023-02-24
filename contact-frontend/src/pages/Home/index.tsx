@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FiDelete } from "react-icons/fi";
 import { FiPlusCircle } from "react-icons/fi";
 import { FiEdit } from "react-icons/fi";
@@ -22,7 +22,7 @@ import data from "../../../data.json";
 import { Modal } from "../../components/Modal";
 import api from "../../services/api";
 
-interface Contact {
+export interface Contact {
   id: string;
   name: string;
   phone: string;
@@ -33,10 +33,35 @@ interface Contact {
 export function Home() {
   const [contacts, setContacts] = useState<Contact[]>();
   const [open, setOpen] = useState(false);
-
-  function handleDelete(id: string) {
-    api.delete(`/contacts/${id}`);
+  const [currentContact, setCurrentContact] = useState<Contact>({
+    email: "",
+    id: "",
+    name: "",
+    phone: "",
+    whatsapp: "",
+  });
+  function handleAdd() {
+    setCurrentContact({ email: "", id: "", name: "", phone: "", whatsapp: "" });
+    setOpen(true);
   }
+
+  function handleEdit(contact: Contact) {
+    setCurrentContact(contact);
+    setOpen(true);
+  }
+  const getContacts = useCallback(() => {
+    api.get<Contact[]>("contacts").then((response) => {
+      setContacts(response.data);
+    });
+  }, []);
+  const handleDelete = useCallback(
+    (id: string) => {
+      api.delete(`/contacts/${id}`);
+      getContacts();
+    },
+    [getContacts]
+  );
+  /*
   useEffect(() => {
     let contactsList: Contact[] = [];
     data.contact.map((contact) => {
@@ -51,13 +76,17 @@ export function Home() {
     });
     setContacts(contactsList);
   }, []);
+  */
+  useEffect(() => {
+    getContacts();
+  }, [getContacts]);
 
   return (
     <>
       <Container>
         <Header>
           <Title>Contact Innova Connect</Title>
-          <ButtonAddContact onClick={() => setOpen(true)}>
+          <ButtonAddContact onClick={handleAdd}>
             <FiPlusCircle />
             <label
               style={{
@@ -82,7 +111,7 @@ export function Home() {
                   </label>
                 </CardItems>
                 <div>
-                  <ButtonEdit>
+                  <ButtonEdit onClick={() => handleEdit(contact)}>
                     <FiEdit />
                   </ButtonEdit>
                   <ButtonDelete onClick={() => handleDelete(contact.id)}>
@@ -109,7 +138,12 @@ export function Home() {
             </CardContact>
           ))}
       </Container>
-      <Modal open={open} setOpen={setOpen} />
+      <Modal
+        open={open}
+        setOpen={setOpen}
+        currentContact={currentContact}
+        getContacts={getContacts}
+      />
     </>
   );
 }
